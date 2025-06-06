@@ -21,7 +21,7 @@ def download_audio(url, output_path="temp_audio.mp3"):
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredquality': '128',  # Reduced quality for faster download
         }],
         'outtmpl': output_path.replace('.mp3', ''),
     }
@@ -34,30 +34,100 @@ def download_audio(url, output_path="temp_audio.mp3"):
             print(f"Error downloading video: {e}")
             return False
 
-def transcribe_audio(audio_path, output_srt):
-    """Transcribe audio file and save as SRT"""
+def split_segments(segments, max_words_per_file=2000):
+    """Split segments into chunks that won't exceed max_words_per_file"""
+    chunks = []
+    current_chunk = []
+    current_word_count = 0
+    
+    for segment in segments:
+        words_in_segment = len(segment.text.split())
+        
+        if current_word_count + words_in_segment >= max_words_per_file and current_chunk:
+            chunks.append(current_chunk)
+            current_chunk = []
+            current_word_count = 0
+        
+        current_chunk.append(segment)
+        current_word_count += words_in_segment
+    
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    if not chunks:
+        chunks = [segments]
+    
+    return chunks
+
+def write_transcript_file(segments, output_file):
+    """Write segments to a text file"""
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for segment in segments:
+            f.write(f"{segment.text.strip()}\n")
+
+def transcribe_audio(audio_path, output_path, max_words=2000, split=False):
+    """Transcribe audio file and save as text"""
     print("Loading Whisper model (this might take a moment)...")
-    model = WhisperModel("base", device="cpu", compute_type="int8")
+    # Optimize model settings for speed
+    model = WhisperModel(
+        "base",
+        device="cpu",
+        compute_type="int8",
+        cpu_threads=4,  # Adjust based on your CPU
+        num_workers=2   # Parallel processing
+    )
     
     print("Transcribing audio...")
-    segments, _ = model.transcribe(audio_path, beam_size=5)
+    segments, _ = model.transcribe(
+        audio_path,
+        beam_size=1,          # Reduced beam size for speed
+        best_of=1,            # Don't generate multiple candidates
+        temperature=0.0,      # Deterministic output
+        condition_on_previous_text=False,  # Don't condition on previous text
+        initial_prompt=None   # No initial prompt
+    )
     
-    print("Generating SRT file...")
-    with open(output_srt, 'w', encoding='utf-8') as f:
-        for i, segment in enumerate(segments, 1):
-            start_time = format_timestamp(segment.start)
-            end_time = format_timestamp(segment.end)
-            text = segment.text.strip()
-            
-            f.write(f"{i}\n")
-            f.write(f"{start_time} --> {end_time}\n")
-            f.write(f"{text}\n\n")
+    # Convert generator to list only once
+    segments = list(segments)
+    print(f"Transcribed {len(segments)} segments")
+    
+    if not split:
+        print("Writing single file...")
+        write_transcript_file(segments, output_path)
+        return
+    
+    # Split into multiple files
+    chunks = split_segments(segments, max_words)
+    if len(chunks) == 1:
+        print("Content fits in a single file")
+        write_transcript_file(segments, output_path)
+        return
+    
+    print(f"\nCreating {len(chunks)} separate files...")
+    base_name, ext = os.path.splitext(output_path)
+    
+    for i, chunk in enumerate(chunks, 1):
+        chunk_file = f"{base_name}_part{i}{ext}"
+        write_transcript_file(chunk, chunk_file)
+        print(f"Part {i} saved to {chunk_file}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Transcribe YouTube video to SRT subtitles")
+    parser = argparse.ArgumentParser(description="Transcribe YouTube video")
     parser.add_argument("url", help="YouTube video URL")
-    parser.add_argument("--output", "-o", default="output.srt", help="Output SRT file path")
+    parser.add_argument("--output", "-o", default="output.txt", help="Output text file path")
+    parser.add_argument("--split", action="store_true", help="Split output into multiple files")
+    parser.add_argument("--max-words", type=int, default=2000, 
+                       help="Maximum words per file when splitting (default: 2000)")
     args = parser.parse_args()
+
+    # Print configuration
+    print("\nConfiguration:")
+    print(f"Input URL: {args.url}")
+    print(f"Output file: {args.output}")
+    print(f"Split files: {args.split}")
+    if args.split:
+        print(f"Max words per file: {args.max_words}")
+    print()
 
     temp_audio = "temp_audio.mp3"
     
@@ -67,12 +137,12 @@ def main():
             sys.exit(1)
         
         print("Starting transcription...")
-        transcribe_audio(temp_audio, args.output)
+        transcribe_audio(temp_audio, args.output, args.max_words, args.split)
         
-        print(f"Transcription completed! Subtitles saved to {args.output}")
+        if not args.split:
+            print(f"Transcription completed! Text saved to {args.output}")
     
     finally:
-        # Cleanup temporary audio file
         if os.path.exists(temp_audio):
             os.remove(temp_audio)
 

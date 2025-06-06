@@ -1,6 +1,6 @@
 # YouTube Video Transcriber
 
-This Python script downloads a YouTube video's audio and generates subtitles in SRT format using OpenAI's Whisper speech recognition model.
+This Python script downloads a YouTube video's audio and generates a transcript. All processing is done locally on your machine - no API keys required!
 
 ## Prerequisites
 
@@ -21,22 +21,45 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Basic Usage
 Run the script with a YouTube URL:
 ```bash
 python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID"
 ```
 
-To specify a custom output file:
+By default, this will:
+- Create a single transcript file
+- Save transcript as `output.txt`
+
+### Split Long Transcripts
+For long videos, you can split the transcript into multiple files:
 ```bash
-python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID" -o my_subtitles.srt
+python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID" --split
 ```
 
-The script will:
-1. Download the audio from the YouTube video
-2. Transcribe the audio using Whisper
-3. Generate subtitles in SRT format
-4. Clean up temporary files automatically
+This will create multiple files (`output_part1.txt`, `output_part2.txt`, etc.) if the transcript is long.
+
+### Additional Options
+- `-o` or `--output`: Specify output text file path (default: output.txt)
+- `--split`: Split output into multiple files
+- `--max-words`: Maximum words per file when splitting (default: 2000)
+
+Example with all options:
+```bash
+python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID" \
+    --output "my_transcript.txt" \
+    --split \
+    --max-words 1500
+```
 
 ## Output
 
-The script generates an SRT file containing the video transcription with timestamps. By default, the output file is named `output.srt`. 
+The script generates a text file containing the video transcript:
+- Single file by default
+- Multiple files if --split is used (e.g., output_part1.txt, output_part2.txt, etc.)
+
+## Notes
+
+- The script uses Whisper for transcription
+- All processing is done locally on your machine
+- For very long videos, use the --split option to create multiple smaller transcript files 
