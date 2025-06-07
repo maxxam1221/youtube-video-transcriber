@@ -24,6 +24,7 @@ def download_audio(url, output_path="temp_audio.mp3"):
             'preferredquality': '128',  # Reduced quality for faster download
         }],
         'outtmpl': output_path.replace('.mp3', ''),
+        'cookiesfrombrowser': ('chrome',),  # Use Chrome cookies for authentication
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -32,6 +33,11 @@ def download_audio(url, output_path="temp_audio.mp3"):
             return True
         except Exception as e:
             print(f"Error downloading video: {e}")
+            if "Sign in to confirm you're not a bot" in str(e):
+                print("\nTroubleshooting tips:")
+                print("1. Make sure you're logged into YouTube in Chrome")
+                print("2. If the error persists, try visiting YouTube in Chrome and solving any CAPTCHAs")
+                print("3. Close and reopen Chrome, then try again")
             return False
 
 def split_segments(segments, max_words_per_file=2000):
