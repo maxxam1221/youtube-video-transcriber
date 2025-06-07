@@ -4,6 +4,7 @@ import yt_dlp
 from faster_whisper import WhisperModel
 import argparse
 from datetime import timedelta
+import re
 
 def format_timestamp(seconds):
     """Convert seconds to SRT timestamp format"""
@@ -14,9 +15,27 @@ def format_timestamp(seconds):
     milliseconds = td.microseconds//1000
     return f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
 
-def download_audio(url, output_path="temp_audio.mp3"):
-    """Download audio from YouTube video"""
-    ydl_opts = {
+def is_bilibili_url(url):
+    """Check if the URL is from Bilibili"""
+    bilibili_patterns = [
+        r'bilibili\.com/video/BV\w+',
+        r'bilibili\.com/video/av\d+',
+        r'b23\.tv/\w+'
+    ]
+    return any(re.search(pattern, url) for pattern in bilibili_patterns)
+
+def is_youtube_url(url):
+    """Check if the URL is from YouTube"""
+    youtube_patterns = [
+        r'youtube\.com/watch\?v=[\w-]+',
+        r'youtu\.be/[\w-]+',
+        r'youtube\.com/shorts/[\w-]+'
+    ]
+    return any(re.search(pattern, url) for pattern in youtube_patterns)
+
+def get_download_options(url, output_path):
+    """Get platform-specific download options"""
+    base_opts = {
         'format': 'bestaudio/best',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -24,8 +43,28 @@ def download_audio(url, output_path="temp_audio.mp3"):
             'preferredquality': '128',  # Reduced quality for faster download
         }],
         'outtmpl': output_path.replace('.mp3', ''),
-        'cookiesfrombrowser': ('chrome',),  # Use Chrome cookies for authentication
     }
+
+    if is_youtube_url(url):
+        base_opts['cookiesfrombrowser'] = ('chrome',)  # Use Chrome cookies for YouTube
+    elif is_bilibili_url(url):
+        base_opts.update({
+            'extractor_args': {
+                'bilibili': {
+                    'cookie': os.getenv('BILIBILI_COOKIE', ''),  # Allow cookie override via env variable
+                }
+            }
+        })
+    
+    return base_opts
+
+def download_audio(url, output_path="temp_audio.mp3"):
+    """Download audio from video"""
+    if not (is_youtube_url(url) or is_bilibili_url(url)):
+        print("Error: Unsupported video platform. Only YouTube and Bilibili are supported.")
+        return False
+
+    ydl_opts = get_download_options(url, output_path)
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
@@ -34,10 +73,19 @@ def download_audio(url, output_path="temp_audio.mp3"):
         except Exception as e:
             print(f"Error downloading video: {e}")
             if "Sign in to confirm you're not a bot" in str(e):
-                print("\nTroubleshooting tips:")
+                print("\nTroubleshooting tips for YouTube:")
                 print("1. Make sure you're logged into YouTube in Chrome")
                 print("2. If the error persists, try visiting YouTube in Chrome and solving any CAPTCHAs")
                 print("3. Close and reopen Chrome, then try again")
+            elif is_bilibili_url(url) and ("403" in str(e) or "login" in str(e).lower()):
+                print("\nTroubleshooting tips for Bilibili:")
+                print("1. Set your Bilibili cookie using the BILIBILI_COOKIE environment variable:")
+                print("   export BILIBILI_COOKIE='your_cookie_here'")
+                print("2. To get your cookie:")
+                print("   a. Log into Bilibili in your browser")
+                print("   b. Press F12 to open Developer Tools")
+                print("   c. Go to Application > Cookies > bilibili.com")
+                print("   d. Copy the SESSDATA cookie value")
             return False
 
 def split_segments(segments, max_words_per_file=2000):
