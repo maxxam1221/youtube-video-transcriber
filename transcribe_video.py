@@ -33,6 +33,42 @@ def is_youtube_url(url):
     ]
     return any(re.search(pattern, url) for pattern in youtube_patterns)
 
+def extract_youtube_id(url):
+    """Extract video ID from YouTube URL"""
+    patterns = [
+        r'youtube\.com/watch\?v=([\w-]+)',
+        r'youtu\.be/([\w-]+)',
+        r'youtube\.com/shorts/([\w-]+)'
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+def extract_bilibili_id(url):
+    """Extract video ID from Bilibili URL"""
+    patterns = [
+        r'bilibili\.com/video/(BV\w+)',
+        r'bilibili\.com/video/av(\d+)',
+        r'b23\.tv/(\w+)'
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+    return None
+
+def get_default_output_filename(url):
+    """Generate default output filename based on video ID"""
+    if is_youtube_url(url):
+        video_id = extract_youtube_id(url)
+        return f"youtube_{video_id}.txt" if video_id else "output.txt"
+    elif is_bilibili_url(url):
+        video_id = extract_bilibili_id(url)
+        return f"bilibili_{video_id}.txt" if video_id else "output.txt"
+    return "output.txt"
+
 def get_download_options(url, output_path):
     """Get platform-specific download options"""
     base_opts = {
@@ -166,13 +202,17 @@ def transcribe_audio(audio_path, output_path, max_words=2000, split=False):
         print(f"Part {i} saved to {chunk_file}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Transcribe YouTube video")
+    parser = argparse.ArgumentParser(description="Transcribe YouTube video and generate summary")
     parser.add_argument("url", help="YouTube video URL")
-    parser.add_argument("--output", "-o", default="output.txt", help="Output text file path")
+    parser.add_argument("--output", "-o", help="Output text file path")
     parser.add_argument("--split", action="store_true", help="Split output into multiple files")
     parser.add_argument("--max-words", type=int, default=2000, 
                        help="Maximum words per file when splitting (default: 2000)")
     args = parser.parse_args()
+
+    # Set default output filename based on video ID if not specified
+    if not args.output:
+        args.output = get_default_output_filename(args.url)
 
     # Print configuration
     print("\nConfiguration:")

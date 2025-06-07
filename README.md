@@ -32,8 +32,9 @@ python transcribe_video.py "https://www.bilibili.com/video/BV..."
 ```
 
 By default, this will:
-- Create a single transcript file
-- Save transcript as `output.txt`
+- Create a transcript file named after the video ID:
+  - YouTube videos: `youtube_VIDEO_ID.txt`
+  - Bilibili videos: `bilibili_VIDEO_ID.txt`
 
 ### Authentication
 
@@ -60,17 +61,19 @@ For long videos, you can split the transcript into multiple files:
 python transcribe_video.py "VIDEO_URL" --split
 ```
 
-This will create multiple files (`output_part1.txt`, `output_part2.txt`, etc.) if the transcript is long.
+This will create multiple files with the video ID in the name:
+- For YouTube: `youtube_VIDEO_ID_part1.txt`, `youtube_VIDEO_ID_part2.txt`, etc.
+- For Bilibili: `bilibili_VIDEO_ID_part1.txt`, `bilibili_VIDEO_ID_part2.txt`, etc.
 
 ### Additional Options
-- `-o` or `--output`: Specify output text file path (default: output.txt)
+- `-o` or `--output`: Specify custom output text file path (optional)
 - `--split`: Split output into multiple files
 - `--max-words`: Maximum words per file when splitting (default: 2000)
 
 Example with all options:
 ```bash
 python transcribe_video.py "VIDEO_URL" \
-    --output "my_transcript.txt" \
+    --output "custom_name.txt" \
     --split \
     --max-words 1500
 ```
@@ -78,8 +81,9 @@ python transcribe_video.py "VIDEO_URL" \
 ## Output
 
 The script generates a text file containing the video transcript:
-- Single file by default
-- Multiple files if --split is used (e.g., output_part1.txt, output_part2.txt, etc.)
+- Single file by default, named after the video ID
+- Multiple files if --split is used, with part numbers appended
+- Custom filename if specified with --output
 
 ## Notes
 
