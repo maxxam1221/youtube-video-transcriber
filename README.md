@@ -62,4 +62,4 @@ python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID" \
 
 ## License
 
-MIT License 
+MIT License
