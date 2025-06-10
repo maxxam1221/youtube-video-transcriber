@@ -184,14 +184,14 @@ def transcribe_audio(audio_path, output_path, max_words=2000, split=False):
     if not split:
         print("Writing single file...")
         write_transcript_file(segments, output_path)
-        return
+        return True
     
     # Split into multiple files
     chunks = split_segments(segments, max_words)
     if len(chunks) == 1:
         print("Content fits in a single file")
         write_transcript_file(segments, output_path)
-        return
+        return True
     
     print(f"\nCreating {len(chunks)} separate files...")
     base_name, ext = os.path.splitext(output_path)
@@ -200,15 +200,24 @@ def transcribe_audio(audio_path, output_path, max_words=2000, split=False):
         chunk_file = f"{base_name}_part{i}{ext}"
         write_transcript_file(chunk, chunk_file)
         print(f"Part {i} saved to {chunk_file}")
+    
+    return True
 
 def main():
-    parser = argparse.ArgumentParser(description="Transcribe YouTube video and generate summary")
+    """Main function to run the transcription process"""
+    parser = argparse.ArgumentParser(description="Transcribe YouTube video")
     parser.add_argument("url", help="YouTube video URL")
     parser.add_argument("--output", "-o", help="Output text file path")
     parser.add_argument("--split", action="store_true", help="Split output into multiple files")
     parser.add_argument("--max-words", type=int, default=2000, 
                        help="Maximum words per file when splitting (default: 2000)")
     args = parser.parse_args()
+
+    # Clean up any existing transcript files
+    for file in os.listdir('.'):
+        if (file.startswith('youtube_') or file.startswith('bilibili_')) and file.endswith('.txt'):
+            os.remove(file)
+            print(f"Removed existing file: {file}")
 
     # Set default output filename based on video ID if not specified
     if not args.output:
@@ -228,15 +237,28 @@ def main():
     try:
         print("Downloading audio...")
         if not download_audio(args.url, temp_audio):
+            print("Error: Failed to download audio")
+            if os.path.exists(temp_audio):
+                os.remove(temp_audio)
             sys.exit(1)
         
         print("Starting transcription...")
-        transcribe_audio(temp_audio, args.output, args.max_words, args.split)
-        
+        if not transcribe_audio(temp_audio, args.output, args.max_words, args.split):
+            print("Error: Failed to transcribe audio")
+            if os.path.exists(temp_audio):
+                os.remove(temp_audio)
+            sys.exit(1)
+            
         if not args.split:
             print(f"Transcription completed! Text saved to {args.output}")
     
+    except Exception as e:
+        print(f"Error: An unexpected error occurred: {str(e)}")
+        if os.path.exists(temp_audio):
+            os.remove(temp_audio)
+        sys.exit(1)
     finally:
+        # Clean up temporary file
         if os.path.exists(temp_audio):
             os.remove(temp_audio)
 

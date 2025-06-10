@@ -21,12 +21,9 @@ wheels/
 *.egg
 
 # Virtual Environment
-.env
-.venv
-env/
 venv/
+env/
 ENV/
-.venvMac/
 
 # IDE
 .idea/
@@ -35,6 +32,6 @@ ENV/
 *.swo
 
 # Project specific
-*.mp3
-*.srt
-temp_* 
+temp_audio.mp3
+*.txt
+!requirements.txt 

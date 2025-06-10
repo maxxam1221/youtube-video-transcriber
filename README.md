@@ -1,93 +1,65 @@
-# Video Transcriber
+# Video Transcription Tool
 
-This Python script downloads videos from YouTube or Bilibili and generates transcripts. All processing is done locally on your machine - no API keys required!
+A Python tool for transcribing videos from YouTube and Bilibili using Whisper AI.
 
-## Prerequisites
+## Features
 
-- Python 3.7 or higher
-- FFmpeg (required for audio processing)
+- Supports YouTube and Bilibili video URLs
+- Uses Faster Whisper for efficient transcription
+- Option to split long transcripts into multiple files
+- Automatic cleanup of temporary files
+- Supports multiple languages
+- Configurable model size and compute type
 
 ## Installation
 
-1. Install FFmpeg:
-   - On macOS: `brew install ffmpeg`
-   - On Ubuntu/Debian: `sudo apt-get install ffmpeg`
-   - On Windows: Download from [FFmpeg website](https://ffmpeg.org/download.html)
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/transcript_video.git
+cd transcript_video
+```
 
-2. Install Python dependencies:
+2. Install the required dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Basic Usage
-Run the script with a video URL:
+Basic usage:
 ```bash
-# For YouTube
 python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID"
-
-# For Bilibili
-python transcribe_video.py "https://www.bilibili.com/video/BV..."
 ```
 
-By default, this will:
-- Create a transcript file named after the video ID:
-  - YouTube videos: `youtube_VIDEO_ID.txt`
-  - Bilibili videos: `bilibili_VIDEO_ID.txt`
-
-### Authentication
-
-#### YouTube
-The script uses Chrome cookies for YouTube authentication. Make sure you:
-1. Are logged into YouTube in Chrome
-2. Have completed any CAPTCHAs if requested
-
-#### Bilibili
-For Bilibili videos that require login, you'll need to provide your cookie:
-1. Log into Bilibili in your browser
-2. Get your SESSDATA cookie:
-   - Press F12 to open Developer Tools
-   - Go to Application > Cookies > bilibili.com
-   - Find and copy the SESSDATA cookie value
-3. Set the environment variable:
+Advanced options:
 ```bash
-export BILIBILI_COOKIE='your_cookie_here'
+python transcribe_video.py "https://www.youtube.com/watch?v=VIDEO_ID" \
+    --output custom_output.txt \
+    --split \
+    --max-words 2000 \
+    --model base \
+    --device cuda \
+    --language en \
+    --compute_type float16
 ```
 
-### Split Long Transcripts
-For long videos, you can split the transcript into multiple files:
-```bash
-python transcribe_video.py "VIDEO_URL" --split
-```
+### Command Line Arguments
 
-This will create multiple files with the video ID in the name:
-- For YouTube: `youtube_VIDEO_ID_part1.txt`, `youtube_VIDEO_ID_part2.txt`, etc.
-- For Bilibili: `bilibili_VIDEO_ID_part1.txt`, `bilibili_VIDEO_ID_part2.txt`, etc.
-
-### Additional Options
-- `-o` or `--output`: Specify custom output text file path (optional)
+- `url`: URL of the video to transcribe (required)
+- `--output`, `-o`: Custom output file path
 - `--split`: Split output into multiple files
 - `--max-words`: Maximum words per file when splitting (default: 2000)
+- `--model`, `-m`: Whisper model size (tiny, base, small, medium, large)
+- `--device`, `-d`: Device to run inference on (cuda, cpu)
+- `--language`, `-l`: Language code (e.g., en, zh, ja)
+- `--compute_type`, `-c`: Model compute type (float16, float32, int8)
 
-Example with all options:
-```bash
-python transcribe_video.py "VIDEO_URL" \
-    --output "custom_name.txt" \
-    --split \
-    --max-words 1500
-```
+## Requirements
 
-## Output
+- Python 3.7+
+- FFmpeg
+- CUDA (optional, for GPU acceleration)
 
-The script generates a text file containing the video transcript:
-- Single file by default, named after the video ID
-- Multiple files if --split is used, with part numbers appended
-- Custom filename if specified with --output
+## License
 
-## Notes
-
-- The script uses Whisper for transcription
-- All processing is done locally on your machine
-- For very long videos, use the --split option to create multiple smaller transcript files
-- Supports both YouTube and Bilibili videos 
+MIT License 
